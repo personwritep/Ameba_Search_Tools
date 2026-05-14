@@ -1,0 +1,205 @@
+// ==UserScript==
+// @name         Ameba Search Tools
+// @namespace    http://tampermonkey.net/
+// @version      0.2
+// @description  アメーバ検索の環境ツール
+// @author       Ameba Blog User
+// @match        https://search.ameba.jp/*
+// @icon           https://www.google.com/s2/favicons?sz=64&domain=ameba.jp
+// @grant         none
+// ==/UserScript==
+
+
+let target=document.querySelector('head');
+let monitor=new MutationObserver(page_select);
+monitor.observe(target, { childList: true });
+
+
+function page_select(){
+    if(document.querySelector('.PcResultPagination')){
+        main(); }}
+
+
+function main(){
+
+    let now;
+    let now_u;
+    let now_s;
+    let q;
+    let now_s_q;
+    let now_s_pre;
+    let now_s_next;
+    let pre_url;
+    let next_url;
+
+
+    function get_pre_url(){
+        now=location.href;
+        now_u=now.split('?')[0];
+        now_s=now.split('?')[1];
+
+        if(now_s){
+            q=now_s.split('&');
+            for(let k=0; k<q.length; k++){
+                if(q[k].indexOf('p=')!=-1){
+                    now_s_q=q[k]; }}
+
+            let now_page;
+            if(now_s_q){
+                now_page=now_s_q.substr(2);
+
+                if(now_page/1==1){
+                    now_s_pre='p=1'; }
+                else{
+                    now_s_pre='p='+ (now_page/1 -1); }
+                if(now_s_pre){
+                    for(let k=0; k<q.length; k++){
+                        if(q[k].indexOf('p=')!=-1){
+                            q[k]=now_s_pre; }}
+                    pre_url=now_u +'?'+ q.join('&'); }}
+            else{
+                pre_url=now +'&p=1'; }}
+        else{
+            pre_url=now +'?p=1'; }
+
+    } // get_pre_url()
+
+
+    function get_next_url(){
+        now=location.href;
+        now_u=now.split('?')[0];
+        now_s=now.split('?')[1];
+
+        if(now_s){
+            q=now_s.split('&');
+            for(let k=0; k<q.length; k++){
+                if(q[k].indexOf('p=')!=-1){
+                    now_s_q=q[k]; }}
+
+            let now_page;
+            if(now_s_q){
+                now_page=now_s_q.substr(2);
+
+                if(now_page/1==100){
+                    now_s_next='p=100'; }
+                else{
+                    now_s_next='p='+ (now_page/1 +1); }
+                if(now_s_next){
+                    for(let k=0; k<q.length; k++){
+                        if(q[k].indexOf('p=')!=-1){
+                            q[k]=now_s_next; }}
+                    next_url=now_u +'?'+ q.join('&'); }}
+            else{
+                next_url=now +'&p=1'; }}
+        else{
+            next_url=now +'?p=1'; }
+
+    } // get_next_url()
+
+
+
+    document.addEventListener("keydown", check_arrow);
+    function check_arrow(event){
+        if(event.keyCode==37){ //「⇦」
+            event.preventDefault();
+            go_pre(); }
+        if(event.keyCode==39){ //「⇨」
+            event.preventDefault();
+            go_next() }
+        if(event.keyCode==38){ //「⇧」
+            event.preventDefault();
+            select_up(); }
+        if(event.keyCode==40){ //「⇩」
+            event.preventDefault();
+            select_down() }
+        if(event.keyCode==13){ //「Enter」
+            event.preventDefault();
+            select_open(event); }}
+
+
+    function go_pre(){
+        if(go_check(0)){
+            get_pre_url();
+            if(pre_url){
+                location.href=pre_url; }}}
+
+
+    function go_next(){
+        if(go_check(1)){
+            get_next_url();
+            if(next_url){
+                location.href=next_url; }}}
+
+
+    function go_check(n){
+        if(n==0){
+            let edge=document.querySelector('.PcResultPagination_MoreLink .s-triangle-left');
+            if(edge){
+                return true; }
+            else{
+                return false; }}
+        if(n==1){
+            let edge=document.querySelector('.PcResultPagination_MoreLink .s-triangle-right');
+            if(edge){
+                return true; }
+            else{
+                return false; }}}
+
+
+    let items;
+
+    function get_items(){
+        let PcBL=document.querySelectorAll('.PcBloggerListItem');
+        let PcAN=document.querySelectorAll('.PcAmebaNewsListItem');
+        let PcEL=document.querySelectorAll('.PcEntryListItem');
+
+        if(PcBL.length!=0){
+            items=PcBL; }
+        else if(PcAN.length!=0){
+            items=PcAN; }
+        else if(PcEL.length!=0){
+            items=PcEL; }
+    } // get_items()
+
+
+    let order=-1;
+
+    function select_up(){
+        get_items();
+        if(order>0){
+            for(let k=0; k<items.length; k++){
+                items[k].style.outline=''; }
+            order=order-1;
+            items[order].style.outline='2px solid #2196f3'; }}
+
+
+    function select_down(){
+        get_items();
+        if(order<items.length-1){
+            for(let k=0; k<items.length; k++){
+                items[k].style.outline=''; }
+            order=order+1;
+            items[order].style.outline='2px solid #2196f3'; }}
+
+
+    function select_open(event){
+        get_items();
+        for(let k=0; k<items.length; k++){
+            if(items[k].style.outlineWidth=='2px'){
+                let link=items[k].querySelector('a');
+                if(link){
+                    let url=link.getAttribute('href');
+                    if(event.ctrlKey){
+                        window.open(url, '_blank'); }
+                    else{
+                        window.location.href=url; }}}}}
+
+
+    let s_input=document.querySelector('.PcSuggestForm_Input');
+    if(s_input){
+        s_input.onclick=function(){
+            get_items();
+            for(let k=0; k<items.length; k++){
+                items[k].style.outline=''; }}}
+
+} // main()
